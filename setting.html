@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunch Portal | Settings</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Poppins:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="glass-header">
+        <div class="header-content">
+            <a href="index.html" class="logo"><span class="logo-icon animated-plate"><span
+                        class="plate-dish"></span><span class="food-morsel"></span><span
+                        class="utensil-knife"></span><span class="utensil-spoon"></span></span> Lunch Portal</a>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Menu</a></li>
+                    <li><a href="history.html">Payment</a></li>
+                    <li><a href="setting.html" class="active">Settings</a></li>
+                </ul>
+            </nav>
+            <div id="auth-container"></div>
+        </div>
+        <div class="mobile-nav-panel" id="mobile-nav-panel">
+            <ul>
+                <li><a href="index.html">Menu</a></li>
+                <li><a href="history.html">History</a></li>
+                <li><a href="setting.html" class="active">Settings</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2><span class="anim-float">⚙️</span> Admin Configuration</h2>
+        <div class="settings-layout">
+            <nav class="settings-nav glass">
+                <ul>
+                    <li class="active" onclick="SettingLogic.switchTab('menu')"><span class="anim-float">🍱</span> Menu
+                        Management</li>
+                    <li onclick="SettingLogic.switchTab('users')"><span class="anim-float">👥</span> User Management
+                    </li>
+                    <li onclick="SettingLogic.switchTab('config')"><span class="anim-float">📆</span> General Config
+                    </li>
+                    <li onclick="SettingLogic.switchTab('schedule')"><span class="anim-float">⏱️</span> Schedule</li>
+                </ul>
+            </nav>
+
+            <section class="settings-content glass">
+                <div id="tab-menu" class="tab-pane active">
+                    <div class="table-header">
+                        <h3>Vendors</h3><button class="btn btn-primary" onclick="VendorModal.open()">+ Add
+                            Vendor</button>
+                    </div>
+                    <div id="vendor-grid" class="vendor-grid"></div>
+                </div>
+
+                <div id="tab-users" class="tab-pane">
+                    <div class="table-header">
+                        <h3>Users</h3><button class="btn btn-primary" onclick="UserModal.open()">+ Add User</button>
+                    </div>
+                    <table id="setting-user-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Password</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="tab-config" class="tab-pane">
+                    <h3>Global Settings</h3>
+                    <div class="form-group"><label class="form-label">No Service Banners (Auto Add)</label>
+                        <div id="gs-no-service-container"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Announcement Message</label><input
+                            id="gs-announcement" class="custom-input" placeholder="e.g. Order early due to holiday!">
+                    </div>
+                    <h4 style="margin-top:20px;">Payment Dashboard Config</h4>
+                    <div class="form-group"><label class="form-label">Payment QR URL</label><input id="pay-qr"
+                            class="custom-input"></div>
+                    <div class="dynamic-row"><input id="pay-acc" class="custom-input" placeholder="Account No"><input
+                            id="pay-holder" class="custom-input" placeholder="Holder Name"><input id="pay-bank"
+                            class="custom-input" placeholder="Remark"></div>
+                    <button class="btn btn-primary" onclick="SettingLogic.saveGlobal()">Save Global Settings</button>
+                </div>
+
+                <div id="tab-schedule" class="tab-pane">
+                    <div class="table-header">
+                        <h3>Schedule</h3><button class="btn btn-primary" onclick="ConfigModal.open()">+ Schedule
+                            Date</button>
+                    </div>
+                    <table id="setting-config-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Vendor</th>
+                                <th>Cutoff</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div id="schedule-pagination" class="pagination"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="vendor-modal" class="modal-overlay">
+        <div class="modal-content glass" style="max-width:800px;">
+            <button class="modal-close" onclick="VendorModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2>Edit Vendor</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="vendor-modal-layout" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                    <div class="vendor-left-panel">
+                        <div class="form-group"><label class="form-label">Vendor Name</label><input id="v-name"
+                                class="custom-input"></div>
+                        <div class="form-group"><label class="form-label">Description</label><textarea
+                                id="v-description" class="custom-input textarea"
+                                placeholder="Vendor description (optional)" rows="3"></textarea></div>
+                        <div class="form-group"><label class="form-label">Banner Images</label>
+                            <div id="v-banners-container"></div>
+                        </div>
+                        <div class="form-group"><label class="form-label">Sub-Vendors</label>
+                            <div id="v-subs-container"></div>
+                        </div>
+                    </div>
+                    <div class="vendor-right-panel">
+                        <div class="table-header">
+                            <h3>Menu Items</h3><button class="btn btn-sm btn-secondary" onclick="MenuItemModal.open()">+
+                                Add</button>
+                        </div>
+                        <div class="menu-items-scroll-wrapper">
+                            <table id="vendor-menu-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:20px;"><button class="btn btn-delete"
+                                onclick="VendorModal.delete()"><span class="anim-wiggle">🗑️</span></button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-primary" onclick="VendorModal.save()">Save Vendor</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="menu-item-modal" class="modal-overlay" style="z-index:2100;">
+        <div class="modal-content glass">
+            <button class="modal-close" onclick="MenuItemModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2>Item Details</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="form-group"><label class="form-label">Item Name</label><input id="mi-name"
+                        class="custom-input"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea id="mi-description"
+                        class="custom-input textarea" placeholder="Item description (optional)" rows="3"></textarea>
+                </div>
+                <div class="form-group"><label class="form-label">Sub-Vendor Category</label><select id="mi-subvendor"
+                        class="custom-input"></select></div>
+                <div class="form-group"><label class="form-label">Price</label><input id="mi-price" type="number"
+                        class="custom-input"></div>
+                <div class="form-group"><label class="form-label">Required Options (Auto Add Row)</label>
+                    <div id="mi-variants-container"></div>
+                </div>
+                <div class="form-group"><label class="form-label">Add-ons (Auto Add Row)</label>
+                    <div id="mi-addons-container"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <!-- 🟢 FIXED: Added proper IDs and onclick handlers -->
+                <button class="btn btn-delete" style="margin-right:auto;" id="btn-delete-item"
+                    onclick="MenuItemModal.delete(MenuItemModal.currentId)"><span
+                        class="anim-wiggle">🗑️</span></button>
+                <button class="btn btn-primary" id="btn-save-item" onclick="MenuItemModal.save()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="UserModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2>User</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="form-group"><label class="form-label">Username</label><input id="u-name"
+                        class="custom-input"></div>
+                <div class="form-group"><label class="form-label">Password</label><input id="u-pass"
+                        class="custom-input"></div>
+                <div class="form-group"><label class="form-label">Role</label><select id="u-role" class="custom-input">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="collector">Collector</option>
+                    </select></div>
+            </div>
+            <div class="modal-footer">
+                <div style="display:flex; justify-content:space-between; width:100%"><button class="btn btn-delete"
+                        onclick="UserModal.delete(UserModal.currentId)"><span
+                            class="anim-wiggle">🗑️</span></button><button class="btn btn-primary"
+                        onclick="UserModal.save()">Save User</button></div>
+            </div>
+        </div>
+    </div>
+    <div id="config-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="ConfigModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2>Daily Schedule</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="form-group"><label class="form-label">Date</label><input type="date" id="c-date"
+                        class="custom-input"></div>
+                <div class="form-group"><label class="form-label">Active Vendor</label><select id="c-vendor"
+                        class="custom-input"></select></div>
+                <div class="form-group"><label class="form-label">Cutoff Date & Time</label><input type="datetime-local"
+                        id="c-cutoff" class="custom-input"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-delete" style="margin-right:auto;"
+                    onclick="ConfigModal.delete(ConfigModal.currentIndex)"><span
+                        class="anim-wiggle">🗑️</span></button><button class="btn btn-primary"
+                    onclick="ConfigModal.save()">Save Schedule</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="script.js"></script>
+    <script src="setting.js"></script>
+</body>
+
+</html>
