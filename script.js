@@ -552,6 +552,7 @@ const ItemModal = {
         const beneficiary = AppData.users.find(u => u.name.toLowerCase() === orderFor.toLowerCase());
         const finalPayer = beneficiary ? beneficiary.name : AppState.user.name; // If valid user, they pay; else I pay
         const finalUser = beneficiary ? beneficiary.name : orderFor; // Standardize name if valid user
+        const createdBy = AppState.user.name; // Track who submitted
 
         const finalPrice = item.price + extraCost;
         const remarks = document.getElementById('m-notes').value;
@@ -565,7 +566,7 @@ const ItemModal = {
             }
         } else {
             const newOrder = {
-                id: Date.now(), user: finalUser, payer: finalPayer,
+                id: Date.now(), user: finalUser, payer: finalPayer, createdBy: createdBy,
                 vendor: AppState.activeVendor.name, subVendor: item.subVendor,
                 item: finalItemName, addons: selectedAddonNames,
                 remarks: remarks, price: finalPrice, status: 'Unpaid', date: AppState.selectedDate
