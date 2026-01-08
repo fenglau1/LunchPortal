@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunch Portal | Payment</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Poppins:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="glass-header">
+        <div class="header-content">
+            <a href="index.html" class="logo"><span class="logo-icon animated-plate"><span
+                        class="plate-dish"></span><span class="food-morsel"></span><span
+                        class="utensil-knife"></span><span class="utensil-spoon"></span></span> Lunch Portal</a>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Menu</a></li>
+                    <li><a href="history.html" class="active">Payment</a></li>
+                    <li class="nav-admin" style="display:none;"><a href="setting.html">Settings</a></li>
+                </ul>
+            </nav>
+            <div id="auth-container"></div>
+        </div>
+        <div class="mobile-nav-panel" id="mobile-nav-panel">
+            <ul>
+                <li><a href="index.html">Menu</a></li>
+                <li><a href="history.html" class="active">Payment</a></li>
+                <li class="nav-admin" style="display:none"><a href="setting.html">Settings</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-grid">
+            <section id="admin-dashboard" class="admin-dashboard glass" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+                    <div>
+                        <h3><span class="anim-float">👮</span> Overview</h3>
+                        <p style="color:var(--text-light); margin:0;">Overview of all user debts.</p>
+                    </div>
+                    <div class="admin-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon anim-pulse">📉</div>
+                            <div class="stat-info"><small>Total Debt</small><span id="adm-total-unpaid">RM 0.00</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon anim-pulse">⏳</div>
+                            <div class="stat-info"><small>Pending Completed</small><span id="adm-total-orders">0
+                                    ORDERS</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-controls"
+                    style="margin-top:15px; border-top:1px solid rgba(0,0,0,0.05); padding-top:15px;">
+                    <label style="font-size:0.9rem; font-weight:600; margin-right:10px;">Check User Balance:</label>
+                    <select id="admin-user-filter" class="custom-input" style="max-width:300px;"
+                        onchange="HistoryLogic.onAdminUserChange(this.value)">
+                        <option value="">-- Select User --</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="balance-card glass">
+                <div class="balance-info">
+                    <h2><span class="anim-float">💰</span> Outstanding Balance</h2>
+                    <p>Please clear your unpaid order on time.</p>
+                </div>
+                <div class="balance-actions split-actions">
+                    <div class="balance-col">
+                        <div class="balance-amount-label">TOTAL DUE</div>
+                        <div class="balance-total" id="user-outstanding">RM 0.00</div>
+                        <button class="btn btn-primary full-width" id="btn-pay-total"
+                            onclick="PaymentModal.payAll()">Pay
+                            Total Due</button>
+                    </div>
+                    <div class="balance-col">
+                        <div class="balance-amount-label">Total Selected</div>
+                        <div class="balance-total" id="user-selected-total">RM 0.00</div>
+                        <button class="btn btn-secondary full-width" id="btn-pay-selected"
+                            onclick="PaymentModal.openBatch()">Select Items to Pay</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="payment-dashboard">
+                <div class="payment-card glass">
+                    <div class="qr-section"><img id="pd-qr" class="qr-img" src="" alt="Scan to Pay"></div>
+                    <div class="bank-details">
+                        <h3>Payment Details</h3>
+                        <div class="bank-row"><span class="bank-label">Account No.</span><span class="bank-value"
+                                id="pd-acc" onclick="Utils.copyToClipboard(this.innerText)"
+                                title="Click to Copy"></span></div>
+                        <div class="bank-row"><span class="bank-label">Holder Name</span><span class="bank-value"
+                                id="pd-holder"></span></div>
+                        <div class="bank-row"><span class="bank-label">Remark</span><span class="bank-value"
+                                id="pd-bank">-</span></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="history-section glass">
+            <div class="table-controls">
+                <h3><span class="anim-float">📜</span> Order History</h3>
+                <div class="filters"><input type="text" id="search-input" class="custom-input"
+                        placeholder="Search..."><select id="status-filter" class="custom-input">
+                        <option value="all">All Status</option>
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Completed">Completed</option>
+                    </select></div>
+            </div>
+            <div class="table-wrapper">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;"><input type="checkbox" onchange="HistoryLogic.toggleAll(this)"></th>
+                            <th class="sortable" onclick="HistoryLogic.sortBy('date')" data-key="date" title="Sort">Date
+                            </th>
+                            <th class="col-user sortable" onclick="HistoryLogic.sortBy('payer')" data-key="payer"
+                                title="Sort">User</th>
+                            <th class="col-ref sortable" onclick="HistoryLogic.sortBy('paymentRef')"
+                                data-key="paymentRef" title="Sort">Ref</th>
+                            <th class="sortable" onclick="HistoryLogic.sortBy('price')" data-key="price" title="Sort">
+                                Amount</th>
+                            <th class="sortable" onclick="HistoryLogic.sortBy('status')" data-key="status" title="Sort">
+                                Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+            <div id="history-pagination" class="pagination"></div>
+        </section>
+
+        <section class="summary-section glass">
+            <div class="table-header">
+                <h3><span class="anim-float">📅</span> Daily Summary</h3>
+            </div>
+            <div class="summary-controls">
+                <div><label>From:</label><input type="date" id="sum-start" class="custom-input" style="width:auto">
+                </div>
+                <div><label>To:</label><input type="date" id="sum-end" class="custom-input" style="width:auto"></div>
+                <div class="multi-select-container">
+                    <div class="multi-select-btn" onclick="HistoryLogic.toggleMultiSelect()">Exclude Users ▼</div>
+                    <div id="ms-dropdown" class="multi-select-dropdown"></div>
+                </div>
+                <div class="summary-total"><small>Pending Total</small><span id="summary-grand-total">RM 0.00</span>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table id="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Total Orders</th>
+                            <th style="text-align:right">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="daily-manage-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="DailyManageModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2 id="dm-title">Manage Day</h2>
+            </div>
+            <div class="modal-scroll-area" id="dm-content"
+                style="max-height:200px; overflow-y:auto; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:20px;">
+            </div>
+            <div class="modal-footer" style="flex-wrap:wrap; gap:10px; justify-content:center;"><button
+                    class="btn btn-sm btn-secondary" onclick="DailyManageModal.setStatus('Ordered')">Set
+                    Ordered</button><button class="btn btn-sm btn-primary"
+                    onclick="DailyManageModal.setStatus('Completed')">Set Completed</button><button
+                    class="btn btn-sm btn-delete" style="width:auto; padding:8px 16px; border-radius:10px;"
+                    onclick="DailyManageModal.cancelDay()">Cancel Day (RM 0)</button></div>
+        </div>
+    </div>
+    <div id="details-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="DetailsModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2><span id="d-title">Order</span> <span class="status-badge" id="d-status"></span></h2>
+            </div>
+            <div class="modal-scroll-area" id="d-content"></div>
+            <div class="modal-footer" id="d-footer"></div>
+        </div>
+    </div>
+    <div id="edit-status-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="EditModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2><span class="anim-float">✏️</span> Edit Status</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="form-group"><label class="form-label">Status</label><select id="edit-status-select"
+                        class="custom-input">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Completed">Completed</option>
+                    </select></div>
+                <div class="form-group"><label class="form-label">Ref</label><input type="text" id="edit-payment-ref"
+                        class="custom-input"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary"
+                    onclick="EditModal.close()">Cancel</button><button class="btn btn-primary"
+                    onclick="EditModal.save()">Save</button></div>
+        </div>
+    </div>
+    <div id="payment-modal" class="modal-overlay">
+        <div class="modal-content glass"><button class="modal-close" onclick="PaymentModal.close()">&times;</button>
+            <div class="modal-header">
+                <h2><span class="anim-float">💸</span> Payment</h2>
+            </div>
+            <div class="modal-scroll-area">
+                <div class="form-group"><label class="form-label">Total</label>
+                    <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="pay-amount"></div>
+                </div>
+                <div class="form-group"><label class="form-label">Ref / Note</label><input type="text" id="pay-ref"
+                        class="custom-input"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary"
+                    onclick="PaymentModal.close()">Cancel</button><button class="btn btn-primary"
+                    onclick="PaymentModal.confirm()">Confirm</button></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="script.js"></script>
+    <script src="history.js"></script>
+</body>
+
+</html>

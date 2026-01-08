@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunch Portal | Menu</title>
+    <!-- Soft Pastel Fonts: Comfortaa for headers, Poppins for body -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Poppins:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library to convert HTML to Image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Library to convert HTML Table to Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="supabase-client.js"></script>
+</head>
+
+
+<body>
+    <header class="glass-header">
+        <div class="header-content">
+            <a href="index.html" class="logo"><span class="logo-icon animated-plate"><span
+                        class="plate-dish"></span><span class="food-morsel"></span><span
+                        class="utensil-knife"></span><span class="utensil-spoon"></span></span> Lunch Portal</a>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Menu</a></li>
+                    <li class="nav-history" style="display:none"><a href="history.html">Payment</a></li>
+                    <li class="nav-admin" style="display:none;"><a href="setting.html">Settings</a></li>
+                </ul>
+            </nav>
+            <div id="auth-container"></div>
+        </div>
+        <div class="mobile-nav-panel" id="mobile-nav-panel">
+            <ul>
+                <li><a href="index.html" class="active">Menu</a></li>
+                <li class="nav-history" style="display:none"><a href="history.html">History</a></li>
+                <li class="nav-admin" style="display:none"><a href="setting.html">Settings</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="info-bar glass">
+            <div>
+                <h1>Delicious Lunch Awaits! <span class="anim-float">😋</span></h1>
+                <p>Order before the cutoff.</p>
+            </div>
+            <div class="info-actions"><input type="date" id="date-picker" class="custom-input">
+                <div id="timer" class="timer-badge">Loading...</div>
+            </div>
+        </section>
+
+        <div class="announcement-wrapper" id="announcement-wrapper" style="display:none;">
+            <div class="marquee">
+                <p id="announcement-text"></p>
+            </div>
+        </div>
+
+        <section class="menu-banner-container">
+            <div id="banner-container" class="banner-scroll"></div>
+            <div class="banner-overlay glass"><small>TODAY'S MENU</small>
+                <h2>Loading...</h2>
+            </div>
+        </section>
+
+        <section id="menu-section"></section>
+
+        <section class="order-table-section glass">
+            <div class="table-header">
+                <h3>
+                    <span class="anim-float">📋</span> Today's Orders
+                    <button class="refresh-btn-header" onclick="Render.refreshOrders()" title="Refresh Orders">
+                        <i class="fa-solid fa-sync"></i>
+                    </button>
+                </h3>
+                <div class="table-actions">
+                    <div class="total-display-box"><small>Grand Total</small><span id="table-grand-total">RM 0.00</span>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="logo-btn btn-image" onclick="ExportModal.copyAsImage()"
+                            title="Copy to Clipboard">
+                            <i class="fa-solid fa-camera anim-wiggle"></i>
+                        </button>
+                        <button class="logo-btn btn-excel" onclick="ExportModal.saveAsXLSX()" title="Export as Excel">
+                            <i class="fa-solid fa-file-excel anim-wiggle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="capture-area" class="table-wrapper">
+                <table id="public-orders">
+                    <thead>
+                        <tr>
+                            <th class="col-num" onclick="Utils.sortOrders('user')" title="Sort">No</th>
+                            <th onclick="Utils.sortOrders('user')" title="Sort" data-col="user">Name</th>
+                            <th onclick="Utils.sortOrders('item')" title="Sort" data-col="details">Order Details</th>
+                            <th onclick="Utils.sortOrders('price')" style="text-align:right" title="Sort"
+                                data-col="price">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="zoom-modal" class="modal-overlay" onclick="ZoomModal.close()">
+        <div class="zoom-content-wrapper">
+            <span class="close-zoom" onclick="ZoomModal.close()">&times;</span>
+            <div id="zoom-prev" class="zoom-nav prev" onclick="event.stopPropagation(); ZoomModal.nav(-1)">❮</div>
+            <img id="zoom-img" class="zoom-img" src="" alt="Full Menu">
+            <div id="zoom-next" class="zoom-nav next" onclick="event.stopPropagation(); ZoomModal.nav(1)">❯</div>
+        </div>
+    </div>
+    <div id="order-modal" class="modal-overlay">
+        <div class="modal-content glass">
+
+
+            <button class="modal-close" onclick="ItemModal.close()">&times;</button>
+            <div class="modal-header">
+                <div class="modal-vendor-tag" id="m-vendor"></div>
+                <h2 id="m-title"></h2>
+                <div class="modal-price" id="m-price"></div>
+            </div>
+            <div class="modal-scroll-area">
+                <div id="m-description" class="item-description"
+                    style="margin-bottom:15px; padding:10px; background:rgba(255,255,255,0.1); border-radius:8px; font-size:0.95rem; color:#666; display:none;">
+                </div>
+                <div class="toggle-group"><button id="btn-self" class="toggle-btn active"
+                        onclick="ItemModal.toggleUser(true)">Myself</button><button id="btn-other" class="toggle-btn"
+                        onclick="ItemModal.toggleUser(false)">Ordering for others</button></div><input id="m-order-user"
+                    class="custom-input" style="display:none;margin-bottom:10px;" placeholder="Enter Name">
+                <div id="m-variants-list"
+                    style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px; display:none;">
+                </div>
+                <div id="m-addons-list"></div><textarea id="m-notes" class="custom-input textarea"
+                    placeholder="Special remarks (e.g. less spicy)"></textarea>
+            </div>
+            <div class="modal-footer">
+                <div class="total-display"><small>Total</small><span id="m-total-price"></span></div>
+                <div style="display:flex; gap:10px;"><button id="btn-delete-order" class="btn btn-delete"
+                        style="display:none;" onclick="ItemModal.deleteOrder()" title="Delete"><span
+                            class="anim-wiggle">🗑️</span></button><button id="btn-submit-order" class="btn btn-primary"
+                        onclick="ItemModal.submitOrder()">Submit
+                        Order</button></div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
