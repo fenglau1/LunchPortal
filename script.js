@@ -389,17 +389,71 @@ const Render = {
         const rows = document.querySelectorAll(`#public-orders tbody tr[data-category="${category}"]`);
         rows.forEach(r => r.classList.remove('category-hover'));
     },
-    initTimer: () => {
-        const el = document.getElementById('timer'); if (!el) return;
-        if (window.timerInterval) clearInterval(window.timerInterval);
-        window.timerInterval = setInterval(() => {
-            if (!AppState.cutoffTime) { el.innerText = "Closed"; el.style.background = "#fab1a0"; return; }
-            const diff = AppState.cutoffTime - new Date();
-            if (diff <= 0) { el.innerText = "Order Closed"; el.style.background = "#fab1a0"; }
-            else { const h = Math.floor(diff / (1000 * 60 * 60)); const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); el.innerText = `Cutoff: ${h}h ${m}m`; el.style.background = "#fff0f0"; }
-        }, 1000);
-    }
-};
+    
+
+initTimer: () => {
+    const el = document.getElementById('timer');
+    if (!el) return;
+
+    const updateDisplay = () => {
+        // 1. Missing Cutoff Logic
+        if (!AppState.cutoffTime) {
+            el.innerHTML = `
+                <div class="timer-countdown">Closed</div>
+                <div class="timer-endtime">Check back later</div>
+            `;
+            el.className = "timer-closed";
+            return;
+        }
+
+        const cutoffDate = new Date(AppState.cutoffTime);
+        const now = new Date();
+        const diff = cutoffDate - now;
+
+        // 2. ORDER CLOSED STATE
+        if (diff <= 0) {
+            el.innerHTML = `
+                <div class="timer-countdown">Order Closed</div>
+                <div class="timer-endtime">See you next time</div>
+            `;
+            
+            // Ensure we remove active classes and apply closed
+            el.className = "timer-closed"; 
+            
+            if (window.timerInterval) clearInterval(window.timerInterval);
+            return;
+        }
+
+        // 3. Active Timer Logic
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const hHtml = h > 0 ? `${h}<span class="unit">h</span>` : ''; 
+        const mHtml = `${m.toString().padStart(2, '0')}<span class="unit">m</span>`;
+        const sHtml = `${s.toString().padStart(2, '0')}<span class="unit">s</span>`;
+        
+        const timeString = cutoffDate.toLocaleTimeString([], { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+        });
+
+        el.innerHTML = `
+            <div class="timer-countdown">${hHtml}${mHtml}${sHtml}</div>
+            <div class="timer-endtime">Ends @ ${timeString}</div>
+        `;
+
+        // 4. Urgency Logic
+        const isUrgent = diff < 600000;
+        const newClass = isUrgent ? "timer-urgent" : "timer-active";
+        
+        if (!el.classList.contains(newClass)) el.className = newClass;
+    };
+
+    if (window.timerInterval) clearInterval(window.timerInterval);
+    updateDisplay();
+    window.timerInterval = setInterval(updateDisplay, 1000);
+}};
 
 const ItemModal = {
     open: (item) => {
