@@ -344,7 +344,7 @@ const Render = {
                 if (o.addons && o.addons.length) detailsHtml += `<div class="item-addons">+ ${o.addons.join(', ')}</div>`;
                 if (o.remarks) detailsHtml += `<div class="item-notes">📝 ${o.remarks}</div>`;
 
-                const displayUser = o.user !== o.payer ? `${o.user} <small style='color:#777; font-size:0.85em'> (by ${o.payer})</small>` : o.user;
+                const displayUser = o.user !== o.payer ? `${o.user} <small style='color:#777; font-size:0.85em'> (*})</small>` : o.user;
                 const isFirstRow = idx === 0;
                 const isLastRow = idx === orders.length - 1;
 
