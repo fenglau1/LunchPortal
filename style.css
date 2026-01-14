@@ -3076,3 +3076,165 @@ td:last-child {
         /* Remove flex centering constraint */
     }
 }
+
+/* =========================================
+   1. MAIN CONTAINER & LAYOUT
+   ========================================= */
+#timer {
+    display: inline-flex;
+    flex-direction: column; /* Stack rows vertically */
+    justify-content: center;
+    align-items: center;
+
+    /* LAYOUT & SIZING (Fixes Wrapping Issues) */
+    min-width: 220px;       /* Wide enough to hold "Order Closed" on one line */
+    padding: 18px 32px;     /* Enhanced breathing room */
+    border-radius: 24px;    /* Modern, smooth rounded corners */
+
+    /* TYPOGRAPHY BASE */
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: white;
+    -webkit-font-smoothing: antialiased;
+    
+    /* GLASSMORPHISM BORDER */
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(8px);
+
+    /* ANIMATION PERFORMANCE */
+    background-size: 200% 200%; /* Required for liquid animation */
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform, box-shadow, background-position;
+    
+    /* PREVENT SELECTION */
+    user-select: none;
+}
+
+/* =========================================
+   2. ROW 1: THE COUNTDOWN NUMBERS
+   ========================================= */
+.timer-countdown {
+    display: flex;
+    align-items: baseline;  /* Aligns numbers with the small 'h m s' */
+    justify-content: center;
+    
+    /* BIG BOLD TEXT */
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    
+    /* CRITICAL: Prevents text from breaking to new line */
+    white-space: nowrap; 
+    
+    /* CRITICAL: Prevents numbers from jittering as they change */
+    font-variant-numeric: tabular-nums; 
+    text-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+/* The small units (h, m, s) */
+.unit {
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: 2px;
+    margin-right: 6px; /* Space between segments */
+    opacity: 0.85;
+    text-transform: lowercase;
+}
+
+/* =========================================
+   3. ROW 2: THE END TIME (PILL)
+   ========================================= */
+.timer-endtime {
+    margin-top: 10px; /* Spacing between rows */
+    
+    /* PILL SHAPE */
+    background: rgba(0, 0, 0, 0.2);
+    padding: 5px 14px;
+    border-radius: 50px;
+    
+    /* TEXT STYLE */
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    
+    /* ALIGNMENT FIX */
+    white-space: nowrap; /* Forces text to one line */
+    width: fit-content;
+}
+
+/* =========================================
+   4. STATES & ANIMATION TRIGGERS
+   ========================================= */
+
+/* STATE A: NORMAL (> 5 mins) - "Liquid & Breathing" */
+.timer-active {
+    /* Pink-Red-Orange Liquid Gradient */
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53, #FF6B6B);
+    background-size: 200% 200%;
+    
+    animation: 
+        gradient-flow 4s ease infinite, 
+        neon-breath 3s ease-in-out infinite;
+}
+
+/* STATE B: URGENT (< 5 mins) - "Panic Heartbeat" */
+.timer-urgent {
+    /* Orange-Red Alert Gradient */
+    background: linear-gradient(135deg, #ff9f43, #ff4757, #ff9f43);
+    background-size: 200% 200%;
+    border-color: rgba(255, 255, 255, 0.5);
+    
+    animation: 
+        gradient-flow 1.5s linear infinite,   /* Fast liquid flow */
+        heartbeat-panic 1.2s ease-in-out infinite; /* Double-thump */
+}
+
+/* STATE C: CLOSED - "Metallic Sleep" */
+.timer-closed {
+    /* Dark Metallic Gradient */
+    background: linear-gradient(145deg, #4b5563, #2d3748);
+    cursor: default;
+    
+    animation: sleeping-breath 4s infinite ease-in-out;
+}
+
+/* Makes the pill inside closed state look inactive */
+.timer-closed .timer-endtime {
+    background: rgba(255, 255, 255, 0.1); 
+    opacity: 0.8;
+}
+
+/* =========================================
+   5. KEYFRAME ANIMATIONS
+   ========================================= */
+
+/* 1. Moves the gradient background left/right (Liquid effect) */
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 2. Gentle breathing + Glow for Normal state */
+@keyframes neon-breath {
+    0% { transform: scale(1); box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3); }
+    50% { transform: scale(1.02); box-shadow: 0 15px 30px rgba(255, 107, 107, 0.5); }
+    100% { transform: scale(1); box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3); }
+}
+
+/* 3. Double-Thump Heartbeat (Lub-Dub......Lub-Dub) */
+@keyframes heartbeat-panic {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(238, 82, 83, 0.7); }
+    15% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(238, 82, 83, 0); } /* Big Thump */
+    30% { transform: scale(1); box-shadow: 0 0 0 0 rgba(238, 82, 83, 0.7); }
+    45% { transform: scale(1.02); box-shadow: 0 0 10px 5px rgba(238, 82, 83, 0); } /* Small Thump */
+    60% { transform: scale(1); } /* Long Rest */
+    100% { transform: scale(1); }
+}
+
+/* 4. Slow fade for Closed state */
+@keyframes sleeping-breath {
+    0%, 100% { opacity: 0.95; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    50% { opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+}
