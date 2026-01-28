@@ -46,6 +46,7 @@ const SupabaseService = {
             vendor: o.vendor_name,
             subVendor: o.sub_vendor,
             item: o.item_name,
+            paymentRef: o.payment_ref,
             paidAt: o.paid_at
         }));
 
