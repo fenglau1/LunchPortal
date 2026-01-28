@@ -219,6 +219,10 @@ const Render = {
             visibleItems = visibleItems.filter(i => i.subVendor === AppState.activeSubVendor);
         }
 
+        visibleItems.sort((a, b) => {
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
         if (visibleItems.length > 0) {
             html += `
             <div class="menu-carousel-wrapper">
