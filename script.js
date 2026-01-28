@@ -337,10 +337,20 @@ const Render = {
             grandTotal += categoryTotal;
 
             orders.forEach((o, idx) => {
-                const menuItem = AppData.menu.find(m => m.name === o.item);
-                let itemDisplay = `${o.item}`;
-                if (menuItem && menuItem.description) itemDisplay += ` - ${menuItem.description}`;
-                let detailsHtml = `<div class="item-main">${itemDisplay}</div>`;
+    // 🟢 FIX: Find menu item by matching BOTH name AND sub-vendor
+    const menuItem = AppData.menu.find(m => 
+        (m.name === o.item || (m.variants && m.variants.some(v => `${m.name} ${v.name}` === o.item))) && 
+        m.subVendor === o.subVendor
+    );
+
+    let itemDisplay = `${o.item}`;
+    
+    // Now it will pull the correct description (e.g., "越式牛肉河粉")
+    if (menuItem && menuItem.description) {
+        itemDisplay += ` - ${menuItem.description}`;
+    }
+
+    let detailsHtml = `<div class="item-main">${itemDisplay}</div>`;
                 if (o.addons && o.addons.length) detailsHtml += `<div class="item-addons">+ ${o.addons.join(', ')}</div>`;
                 if (o.remarks) detailsHtml += `<div class="item-notes">📝 ${o.remarks}</div>`;
 
@@ -469,30 +479,39 @@ const ItemModal = {
 
         AppState.editingOrderId = null; ItemModal.setupModal(item);
     },
-    openForEdit: (orderId) => {
-        const order = AppData.orders.find(o => o.id === orderId); if (!order) return;
-        const isAdmin = AppState.user && AppState.user.role === 'admin';
-        const isOwner = AppState.user && order.payer === AppState.user.name;
+    // --- FIND THIS SECTION IN script.js ---
+openForEdit: (orderId) => {
+    const order = AppData.orders.find(o => o.id === orderId); if (!order) return;
+    const isAdmin = AppState.user && AppState.user.role === 'admin';
+    const isOwner = AppState.user && order.payer === AppState.user.name;
 
-        // 🟢 Strict Cutoff for Edit
-        const isCutoffPassed = AppState.cutoffTime && new Date() > AppState.cutoffTime;
-        if (!isAdmin && isCutoffPassed) return Utils.showToast("⛔ Cutoff Passed. Unable to Edit.");
+    const isCutoffPassed = AppState.cutoffTime && new Date() > AppState.cutoffTime;
+    if (!isAdmin && isCutoffPassed) return Utils.showToast("⛔ Cutoff Passed. Unable to Edit.");
 
-        if (!isAdmin && !isOwner) { if (!confirm(`Edit ${order.user}'s order?`)) return; }
+    if (!isAdmin && !isOwner) { if (!confirm(`Edit ${order.user}'s order?`)) return; }
 
-        // 🟢 Smart Find: Handle "Item Name Variant" pattern
-        const menuItem = AppData.menu.find(m => {
-            if (m.name === order.item) return true; // Exact match
-            if (m.variants && m.variants.length > 0) {
-                // Check if order item matches "Name Variant"
-                return m.variants.some(v => order.item === `${m.name} ${v.name}`);
-            }
-            return false;
-        });
+    // 🟢 UPDATED SMART FIND: Match by both Name AND Sub-Vendor
+    const menuItem = AppData.menu.find(m => {
+        // 1. Check if the sub-vendor matches
+        const isSameSubVendor = m.subVendor === order.subVendor;
+        if (!isSameSubVendor) return false;
 
-        if (!menuItem) return;
-        AppState.editingOrderId = orderId; ItemModal.setupModal(menuItem, order);
-    },
+        // 2. Check if the item name matches (Direct or Variant)
+        if (m.name === order.item) return true; 
+        if (m.variants && m.variants.length > 0) {
+            return m.variants.some(v => order.item === `${m.name} ${v.name}`);
+        }
+        return false;
+    });
+
+    if (!menuItem) {
+        Utils.showToast("❌ Could not find menu item data.");
+        return;
+    }
+    
+    AppState.editingOrderId = orderId; 
+    ItemModal.setupModal(menuItem, order);
+},
     setupModal: (item, existingOrder = null) => {
         AppState.currentSelection = item;
         document.getElementById('m-title').innerText = item.name;
