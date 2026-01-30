@@ -3,6 +3,21 @@ const HistoryLogic = {
     sortField: 'date', sortOrder: 'desc',
     adminSelectedUser: null, // For Admin to view specific user
 
+    selectedVendorId: 'all', 
+
+    toggleVendorSelect: () => { 
+        document.getElementById('vendor-dropdown').classList.toggle('show'); 
+        document.getElementById('ms-dropdown').classList.remove('show'); 
+    },
+
+    // Function to handle choosing one vendor
+    selectVendor: (id, name) => {
+        HistoryLogic.selectedVendorId = id;
+        document.getElementById('vendor-filter-btn').innerText = name + " ▼";
+        document.getElementById('vendor-dropdown').classList.remove('show');
+        HistoryLogic.renderSummary();
+    },
+        
     init: async () => {
         if (!AppState.user) {
             alert("Please login.");
@@ -33,6 +48,7 @@ const HistoryLogic = {
                     users.map(u => `<option value="${u}">${u}</option>`).join('');
                 document.getElementById('admin-dashboard').style.display = 'block'; // Ensure admin dash is visible
             }
+        
         }
 
         HistoryLogic.renderTable();
@@ -137,48 +153,94 @@ const HistoryLogic = {
     changePage: (dir) => { HistoryLogic.currentPage += dir; HistoryLogic.renderTable(); },
 
     initSummaryTable: () => {
-        const dropdown = document.getElementById('ms-dropdown');
+    // 1. Populate Users (Checkbox style - keep as is)
+        const userDropdown = document.getElementById('ms-dropdown');
         const users = [...new Set(AppData.orders.map(o => o.payer || o.user))];
-        dropdown.innerHTML = users.map(u => `<label class="multi-select-option"><input type="checkbox" value="${u}"> ${u}</label>`).join('');
-        const savedExclusions = AppData.config.excludedUsers || [];
-        dropdown.querySelectorAll('input').forEach(cb => { if (savedExclusions.includes(cb.value)) cb.checked = true; });
-        const today = new Date();
-        document.getElementById('sum-start').value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        document.getElementById('sum-end').value = today.toISOString().split('T')[0];
+        userDropdown.innerHTML = users.map(u => `<label class="multi-select-option"><input type="checkbox" value="${u}"> ${u}</label>`).join('');
+    
+    // 2. Populate Vendors (Single-click style)
+        const vendorDropdown = document.getElementById('vendor-dropdown');
+        if (AppData.vendors) {
+            let vendorHtml = `<div class="multi-select-option" onclick="HistoryLogic.selectVendor('all', 'All Vendors')">All Vendors</div>`;
+            vendorHtml += AppData.vendors.map(v => 
+               `<div class="multi-select-option" onclick="HistoryLogic.selectVendor('${v.id}', '${v.name}')">${v.name}</div>`
+            ).join('');
+            vendorDropdown.innerHTML = vendorHtml;
+        }
+
+    // 3. Listeners for other filters
         document.getElementById('sum-start').addEventListener('change', HistoryLogic.renderSummary);
         document.getElementById('sum-end').addEventListener('change', HistoryLogic.renderSummary);
-        dropdown.querySelectorAll('input').forEach(cb => cb.addEventListener('change', HistoryLogic.renderSummary));
+        userDropdown.querySelectorAll('input').forEach(cb => cb.addEventListener('change', HistoryLogic.renderSummary));
+
         HistoryLogic.renderSummary();
     },
-    toggleMultiSelect: () => { document.getElementById('ms-dropdown').classList.toggle('show'); },
-    renderSummary: async () => {
-        const start = document.getElementById('sum-start').value;
-        const end = document.getElementById('sum-end').value;
-        const checked = Array.from(document.querySelectorAll('#ms-dropdown input:checked')).map(cb => cb.value);
-        AppData.config.excludedUsers = checked;
-        await SupabaseService.saveGlobalConfig(AppData.config);
-        const tbody = document.getElementById('summary-body');
-        const filtered = AppData.orders.filter(o => {
-            const d = o.date;
-            const matchesDate = (!start || d >= start) && (!end || d <= end);
-            const matchesUser = !checked.includes(o.payer);
-            return matchesDate && matchesUser && o.status !== 'Cancelled';
-        });
-        const grouped = filtered.reduce((acc, row) => {
-            const date = row.date;
-            if (!acc[date]) acc[date] = { count: 0, total: 0 };
-            acc[date].count += 1; acc[date].total += row.price; return acc;
-        }, {});
-        const rows = Object.keys(grouped).sort().map(date => {
-            const dayConfig = AppData.dailyConfig.find(c => c.date === date);
-            const dayStatus = dayConfig ? (dayConfig.status || 'Pending') : 'Pending';
-            const badgeClass = dayStatus === 'Completed' ? 'completed' : (dayStatus === 'Ordered' ? 'ordered' : 'pending');
-            return `<tr class="clickable-row" onclick="DailyManageModal.open('${date}')"><td>📅 ${date}</td><td>${grouped[date].count} Orders</td><td style="text-align:right"><strong>${Utils.formatCurrency(grouped[date].total)}</strong> <span class="status-badge ${badgeClass}">${dayStatus}</span></td></tr>`;
-        }).join('');
-        const grandTotal = filtered.reduce((s, o) => s + o.price, 0);
-        tbody.innerHTML = rows || `<tr><td colspan="3" style="text-align:center; padding:20px; color:#aaa;">No data.</td></tr>`;
-        document.getElementById('summary-grand-total').innerText = Utils.formatCurrency(grandTotal);
-        document.getElementById('ms-dropdown').classList.remove('show');
+        toggleMultiSelect: () => { document.getElementById('ms-dropdown').classList.toggle('show'); },
+        toggleVendorSelect: () => { document.getElementById('vendor-dropdown').classList.toggle('show'); document.getElementById('ms-dropdown').classList.remove('show'); // Close other if open
+    },    
+renderSummary: async () => {
+    const start = document.getElementById('sum-start').value;
+    const end = document.getElementById('sum-end').value;
+    const excludedUsers = Array.from(document.querySelectorAll('#ms-dropdown input:checked')).map(cb => cb.value);
+    
+    const tbody = document.getElementById('summary-body');
+    
+    // 1. Filter Orders by Date and Excluded Users
+    const filteredOrders = AppData.orders.filter(o => {
+        const d = o.date;
+        const matchesDate = (!start || d >= start) && (!end || d <= end);
+        const matchesUser = !excludedUsers.includes(o.payer);
+        return matchesDate && matchesUser && o.status !== 'Cancelled';
+    });
+
+    // 2. Group by Date
+    const grouped = filteredOrders.reduce((acc, row) => {
+        const date = row.date;
+        if (!acc[date]) acc[date] = { count: 0, total: 0 };
+        acc[date].count += 1; 
+        acc[date].total += row.price; 
+        return acc;
+    }, {});
+
+    // 3. Render Rows with Single Vendor Filter
+    const rows = Object.keys(grouped).sort().reverse().map(date => {
+        const dayConfig = AppData.dailyConfig.find(c => c.date === date);
+        const dayStatus = dayConfig ? (dayConfig.status || 'Pending') : 'Pending';
+        
+        const vendorId = dayConfig ? dayConfig.vendorId : null;
+        const vendorObj = AppData.vendors ? AppData.vendors.find(v => v.id == vendorId) : null;
+        const vendorName = vendorObj ? vendorObj.name : 'Unknown';
+
+        // --- SINGLE VENDOR FILTER CHECK ---
+        if (HistoryLogic.selectedVendorId !== 'all' && vendorId != HistoryLogic.selectedVendorId) {
+            return null;
+        }
+
+        const badgeClass = dayStatus === 'Completed' ? 'completed' : (dayStatus === 'Ordered' ? 'ordered' : 'pending');
+        
+        return `
+            <tr class="clickable-row" onclick="DailyManageModal.open('${date}')">
+                <td>📅 ${date}</td>
+                <td>${vendorName}</td>
+                <td>${grouped[date].count} Orders</td>
+                <td style="text-align:right">
+                    <strong>${Utils.formatCurrency(grouped[date].total)}</strong> 
+                    <span class="status-badge ${badgeClass}">${dayStatus}</span>
+                </td>
+            </tr>`;
+    }).filter(r => r !== null).join('');
+
+    tbody.innerHTML = rows || `<tr><td colspan="4" style="text-align:center; padding:20px; color:#aaa;">No data found.</td></tr>`;
+    
+    // 4. Calculate Grand Total (Visible Only)
+    const grandTotal = filteredOrders.reduce((acc, o) => {
+        const dCfg = AppData.dailyConfig.find(c => c.date === o.date);
+        const vId = dCfg ? dCfg.vendorId : null;
+        if (HistoryLogic.selectedVendorId !== 'all' && vId != HistoryLogic.selectedVendorId) return acc;
+        return acc + o.price;
+    }, 0);
+
+    document.getElementById('summary-grand-total').innerText = Utils.formatCurrency(grandTotal);
     },
     updateDashboard: (filteredData) => {
         // userForCalc: The user whose debt we are showing.
@@ -281,6 +343,7 @@ const HistoryLogic = {
         }
         HistoryLogic.renderTable();
     }
+    
 };
 
 
