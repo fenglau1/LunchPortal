@@ -153,10 +153,18 @@
                 <div><label>From:</label><input type="date" id="sum-start" class="custom-input" style="width:auto">
                 </div>
                 <div><label>To:</label><input type="date" id="sum-end" class="custom-input" style="width:auto"></div>
+
+
                 <div class="multi-select-container">
                     <div class="multi-select-btn" onclick="HistoryLogic.toggleMultiSelect()">Exclude Users ▼</div>
                     <div id="ms-dropdown" class="multi-select-dropdown"></div>
                 </div>
+                
+                <div class="multi-select-container">
+                    <div class="multi-select-btn" id="vendor-filter-btn" onclick="HistoryLogic.toggleVendorSelect()">All Vendors ▼</div>
+                    <div id="vendor-dropdown" class="multi-select-dropdown"></div>
+                </div>
+
                 <div class="summary-total"><small>Pending Total</small><span id="summary-grand-total">RM 0.00</span>
                 </div>
             </div>
@@ -165,6 +173,7 @@
                     <thead>
                         <tr>
                             <th>Date</th>
+                            <th>Vendor</th>
                             <th>Total Orders</th>
                             <th style="text-align:right">Total Amount</th>
                         </tr>
