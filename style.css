@@ -1258,7 +1258,6 @@ td:last-child {
 .col-user {
     color: var(--primary);
     font-weight: 800;
-    display: none;
 }
 
 .show-user .col-user {
