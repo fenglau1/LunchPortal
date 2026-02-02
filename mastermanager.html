@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend | Master Manager & Debtors</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Toolbar */
+        .toolbar { 
+            background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;
+            display: flex; flex-wrap: wrap; gap: 12px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .toolbar h1 { margin: 0; font-size: 1.4rem; flex-grow: 1; color: var(--primary); min-width: 200px; }
+        
+        .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        select, input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 14px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid #ddd; }
+
+        /* Dashboard Layout */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; align-items: start; }
+        @media (max-width: 1000px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #ddd; }
+        .stat-card.due { border-left-color: var(--danger); }
+        .stat-card span { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; }
+        .stat-card div { font-size: 1.1rem; font-weight: bold; margin-top: 4px; }
+
+        /* Summary Table Styling (Unpaid by User) */
+        .summary-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: sticky; top: 20px; }
+        .summary-panel h3 { margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 2px solid #f4f7f6; padding-bottom: 10px; }
+        .debt-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .debt-table th { text-align: left; font-size: 0.75rem; color: #999; text-transform: uppercase; padding-bottom: 8px; }
+        .debt-table td { padding: 8px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
+        .debt-amount { text-align: right; font-weight: bold; color: var(--danger); }
+
+        /* Bulk Bar */
+        .bulk-actions { 
+            background: #e3f2fd; padding: 15px 25px; border-radius: 12px; margin-bottom: 15px; 
+            display: none; align-items: center; gap: 20px; border: 2px solid #2196f3;
+        }
+
+        /* Main Table */
+        .table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; font-size: 13px; color: #666; cursor: pointer; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tr:hover { background-color: #f9f9f9; }
+        
+        .row-changed { background-color: #fffde7 !important; }
+        .status-select { padding: 4px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; background: white; border: 1px solid #ddd; }
+        .status-select.unpaid { color: var(--danger); }
+        .status-select.paid { color: var(--success); }
+
+        .inline-input { width: 100%; border: 1px solid transparent; padding: 5px; border-radius: 4px; box-sizing: border-box; }
+        .inline-input:focus { border-color: var(--accent); outline: none; background: #fff; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="toolbar">
+        <h1>🛠️ Master Manager</h1>
+        <div class="filter-group">
+            <input type="text" id="search-input" placeholder="Search..." onkeyup="Manager.render()">
+            <select id="filter-status" onchange="Manager.render()">
+                <option value="all">All Status</option>
+                <option value="Unpaid">Unpaid</option>
+                <option value="Paid">Paid</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <input type="date" id="date-start" onchange="Manager.render()">
+            <input type="date" id="date-end" onchange="Manager.render()">
+        </div>
+        <button class="btn btn-outline" onclick="Manager.init()">🔄 Refresh</button>
+        <button id="save-all-btn" class="btn btn-success" onclick="Manager.saveAll()" disabled>💾 Save Changes</button>
+    </div>
+
+    <div id="bulk-bar" class="bulk-actions">
+        <div style="line-height:1.2">
+            <strong id="selected-count">0 items selected</strong><br>
+            <span id="selected-total" style="font-size:18px; color:#0d47a1; font-weight:800">RM 0.00</span>
+        </div>
+        <div style="flex-grow:1"></div>
+        <button class="btn btn-primary" onclick="Manager.bulkUpdate('Paid')">Mark Paid</button>
+        <button class="btn btn-outline" style="background:white" onclick="Manager.bulkUpdate('Completed')">Mark Completed</button>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- LEFT: MAIN RECORDS -->
+        <div class="left-panel">
+            <div class="stats-grid">
+                <div class="stat-card due"><span>Outstanding (Filtered)</span><div id="stat-due">RM 0.00</div></div>
+                <div class="stat-card"><span>Total Rows</span><div id="stat-count">0</div></div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="30"><input type="checkbox" onchange="Manager.toggleAll(this)"></th>
+                            <th onclick="Manager.sortBy('date')">Date</th>
+                            <th onclick="Manager.sortBy('payer')">Payer/User</th>
+                            <th>Item</th>
+                            <th>Price</th>
+                            <th>Payment Ref</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT: UNPAID SUMMARY BY USER -->
+        <div class="summary-panel">
+            <h3>🔴 Unpaid by Payer</h3>
+            <table class="debt-table">
+                <thead>
+                    <tr>
+                        <th>Payer Name</th>
+                        <th style="text-align:right">Total Unpaid</th>
+                    </tr>
+                </thead>
+                <tbody id="unpaid-summary-body">
+                    <!-- Dynamic Rows -->
+                </tbody>
+                <tfoot>
+                    <tr style="border-top: 2px solid #eee">
+                        <td style="padding-top:10px; font-weight:bold">GRAND TOTAL</td>
+                        <td id="summary-grand-total" class="debt-amount" style="padding-top:10px">RM 0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="supabase-client.js"></script>
+<script>
+    const Manager = {
+        data: [],
+        changes: new Map(), 
+        sortField: 'date',
+        sortOrder: 'desc',
+
+        init: async () => {
+            const res = await SupabaseService.fetchAllValues();
+            Manager.data = res.orders || [];
+            Manager.render();
+        },
+
+        sortBy: (field) => {
+            if (Manager.sortField === field) Manager.sortOrder = Manager.sortOrder === 'asc' ? 'desc' : 'asc';
+            else { Manager.sortField = field; Manager.sortOrder = 'asc'; }
+            Manager.render();
+        },
+
+        trackChange: (id, field, value) => {
+            if (!Manager.changes.has(id)) Manager.changes.set(id, {});
+            Manager.changes.get(id)[field] = value;
+            document.getElementById(`row-${id}`)?.classList.add('row-changed');
+            document.getElementById('save-all-btn').disabled = false;
+        },
+
+        render: () => {
+            const start = document.getElementById('date-start').value;
+            const end = document.getElementById('date-end').value;
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+
+            let filtered = Manager.data.filter(o => {
+                const s = o.status || 'Unpaid';
+                return (!start || o.date >= start) && (!end || o.date <= end) && 
+                       (statusFilter === 'all' || s === statusFilter) &&
+                       (!searchTerm || o.user.toLowerCase().includes(searchTerm) || o.payer.toLowerCase().includes(searchTerm) || o.item.toLowerCase().includes(searchTerm)) &&
+                       o.status !== 'Cancelled';
+            });
+
+            const order = Manager.sortOrder === 'asc' ? 1 : -1;
+            filtered.sort((a, b) => (a[Manager.sortField] < b[Manager.sortField] ? -1 * order : 1 * order));
+
+            // 1. Update Main Table
+            document.getElementById('stat-count').innerText = filtered.length;
+            const tbody = document.getElementById('master-body');
+            tbody.innerHTML = filtered.map(o => {
+                const s = o.status || 'Unpaid';
+                return `<tr id="row-${o.id}" class="${Manager.changes.has(o.id) ? 'row-changed' : ''}">
+                    <td><input type="checkbox" class="row-check" value="${o.id}" onchange="Manager.updateBulkBar()"></td>
+                    <td>${o.date}</td>
+                    <td><strong>${o.payer}</strong><br><small style="color:#888">${o.user}</small></td>
+                    <td>${o.item}</td>
+                    <td>RM ${o.price.toFixed(2)}</td>
+                    <td><input type="text" class="inline-input" value="${Manager.changes.get(o.id)?.paymentRef || o.paymentRef || ''}" onchange="Manager.trackChange(${o.id}, 'paymentRef', this.value)"></td>
+                    <td>
+                        <select class="status-select ${s.toLowerCase()}" onchange="Manager.trackChange(${o.id}, 'status', this.value); this.className='status-select '+this.value.toLowerCase()">
+                            <option value="Unpaid" ${s === 'Unpaid' ? 'selected' : ''}>Unpaid</option>
+                            <option value="Paid" ${s === 'Paid' ? 'selected' : ''}>Paid</option>
+                            <option value="Completed" ${s === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // 2. Update Unpaid Summary Table
+            Manager.renderUnpaidSummary(filtered);
+            Manager.updateBulkBar();
+        },
+
+        renderUnpaidSummary: (filteredData) => {
+            const unpaidOrders = filteredData.filter(o => (o.status || 'Unpaid') === 'Unpaid');
+            
+            // Group by Payer
+            const summary = unpaidOrders.reduce((acc, o) => {
+                acc[o.payer] = (acc[o.payer] || 0) + o.price;
+                return acc;
+            }, {});
+
+            // Sort by amount descending
+            const sortedNames = Object.keys(summary).sort((a, b) => summary[b] - summary[a]);
+            
+            let grandTotal = 0;
+            const summaryBody = document.getElementById('unpaid-summary-body');
+            
+            summaryBody.innerHTML = sortedNames.map(name => {
+                grandTotal += summary[name];
+                return `<tr>
+                    <td>${name}</td>
+                    <td class="debt-amount">RM ${summary[name].toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+
+            if (sortedNames.length === 0) {
+                summaryBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#ccc; padding:20px;">No unpaid items</td></tr>`;
+            }
+
+            document.getElementById('summary-grand-total').innerText = `RM ${grandTotal.toFixed(2)}`;
+            document.getElementById('stat-due').innerText = `RM ${grandTotal.toFixed(2)}`;
+        },
+
+        saveAll: async () => {
+            const btn = document.getElementById('save-all-btn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+            const promises = [];
+            for (const [id, fieldUpdates] of Manager.changes) {
+                const original = Manager.data.find(o => o.id == id);
+                if (original) promises.push(SupabaseService.updateOrder({ ...original, ...fieldUpdates }));
+            }
+            await Promise.all(promises);
+            Manager.changes.clear();
+            alert("✅ Saved");
+            Manager.init();
+            btn.innerText = "💾 Save Changes";
+        },
+
+        updateBulkBar: () => {
+            const checkboxes = document.querySelectorAll('.row-check:checked');
+            const bar = document.getElementById('bulk-bar');
+            if (checkboxes.length > 0) {
+                bar.style.display = 'flex';
+                let total = 0;
+                checkboxes.forEach(cb => {
+                    const order = Manager.data.find(o => o.id == cb.value);
+                    if (order) total += order.price;
+                });
+                document.getElementById('selected-count').innerText = `${checkboxes.length} items selected`;
+                document.getElementById('selected-total').innerText = `RM ${total.toFixed(2)}`;
+            } else bar.style.display = 'none';
+        },
+
+        toggleAll: (m) => {
+            document.querySelectorAll('.row-check').forEach(c => c.checked = m.checked);
+            Manager.updateBulkBar();
+        },
+
+        bulkUpdate: (newStatus) => {
+            document.querySelectorAll('.row-check:checked').forEach(c => {
+                Manager.trackChange(c.value, 'status', newStatus);
+                const rowSelect = document.getElementById(`row-${c.value}`).querySelector('.status-select');
+                rowSelect.value = newStatus;
+                rowSelect.className = 'status-select ' + newStatus.toLowerCase();
+            });
+            Manager.updateBulkBar();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', Manager.init);
+</script>
+
+</body>
+</html>
