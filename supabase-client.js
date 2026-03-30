@@ -33,6 +33,7 @@ const SupabaseService = {
             ...m,
             vendorId: m.vendor_id,
             subVendor: m.sub_vendor,
+            isActive: m.is_active !== false,
             addons: m.addons || [],
             variants: m.variants || []
         }));
