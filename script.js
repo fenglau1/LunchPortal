@@ -10,7 +10,7 @@ let AppData = {
     users: []
 };
 // Keep user session in local for now, but validate against DB could be better.
-const AppState = { user: JSON.parse(localStorage.getItem('lunchUser')) || null, cutoffTime: null, activeVendor: null, activeSubVendor: null, selectedDate: null, currentBannerIndex: 0, currentSelection: null, editingOrderId: null, isOrderingForSelf: true, sortOrder: 'asc', sortKey: 'subVendor', bannerInterval: null };
+const AppState = { user: JSON.parse(localStorage.getItem('lunchUser')) || null, cutoffTime: null, activeVendor: null, activeSubVendor: null, selectedDate: null, currentBannerIndex: 0, currentSelection: null, editingOrderId: null, isOrderingForSelf: true, sortOrder: 'asc', sortKey: 'id', bannerInterval: null };
 
 
 const Utils = {
@@ -79,7 +79,7 @@ const Utils = {
             let valB = b[key] || '';
 
             // Handle numeric sort for price
-            if (key === 'price') {
+            if (key === 'price'|| key === 'id') {
                 return (parseFloat(valA) - parseFloat(valB)) * (AppState.sortOrder === 'asc' ? 1 : -1);
             }
 
@@ -102,6 +102,9 @@ const Render = {
             // Ensure config has payment defaults if missing
             if (!AppData.config) AppData.config = {};
             if (!AppData.config.payment) AppData.config.payment = {};
+            if (AppData.orders) {
+                AppData.orders.sort((a, b) => a.id - b.id);
+            }
         } catch (e) { console.error("Failed to load data", e); }
 
         Render.header();
@@ -383,6 +386,10 @@ const Render = {
             const data = await SupabaseService.fetchAllValues();
             AppData.orders = data.orders; // Update orders specifically
             // We might want to update other things too, but orders is the main one for this view
+
+            AppState.sortKey = 'id';
+            AppState.sortOrder = 'asc';
+            AppData.orders.sort((a, b) => a.id - b.id);
 
             Render.publicOrders();
             Utils.showToast("✅ Orders Refreshed");
