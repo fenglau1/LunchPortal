@@ -57,10 +57,12 @@ const SettingLogic = {
         `).join('');
     },
 
-    renderSchedule: () => {
+renderSchedule: () => {
         const tbody = document.querySelector('#setting-config-table tbody');
-        // Sort by date desc
-        const sorted = [...AppData.dailyConfig].sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Sort by date desc and ONLY show the latest 10
+        const sorted = [...AppData.dailyConfig]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 5); 
 
         tbody.innerHTML = sorted.map((c, index) => {
             const vendor = AppData.vendors.find(v => v.id == c.vendorId);
@@ -190,35 +192,87 @@ const VendorModal = {
 
     close: () => { document.getElementById('vendor-modal').classList.remove('show'); },
 
+// --- INSIDE VendorModal object ---
+
     renderBanners: () => {
         const container = document.getElementById('v-banners-container');
+        // Ensure there is always an empty row at the bottom
         if (VendorModal.tempBanners.length === 0 || VendorModal.tempBanners[VendorModal.tempBanners.length - 1] !== "") {
             VendorModal.tempBanners.push("");
         }
 
+        // Updated HTML: Added Upload button next to the input field
         container.innerHTML = VendorModal.tempBanners.map((url, i) => `
-            <div style="display:flex; gap:10px; margin-bottom:5px;">
-                <input class="custom-input" placeholder="Image URL" value="${url}" oninput="VendorModal.onBannerInput(${i}, this.value)">
+            <div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
+                <input id="v-banner-input-${i}" class="custom-input" placeholder="Image URL" value="${url}" oninput="VendorModal.onBannerInput(${i}, this.value)">
+                
+                <label class="btn btn-secondary" style="cursor:pointer; padding:8px 12px; margin:0; display:flex; align-items:center; white-space:nowrap; font-size: 0.85rem;" title="Upload & Replace this row">
+                    📤
+                    <input type="file" accept="image/*" style="display:none;" onchange="VendorModal.uploadImage(event, ${i})">
+                </label>
+
                 <button class="btn btn-delete" onclick="VendorModal.removeBanner(${i})" style="visibility:${i === VendorModal.tempBanners.length - 1 ? 'hidden' : 'visible'}">×</button>
             </div>
         `).join('');
+    },
+
+    // NEW FUNCTION: Handles ImgBB Upload & Row Overwrite
+    uploadImage: async (event, i) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // ⚠️ PASTE YOUR IMGBB API KEY HERE
+        const IMGBB_API_KEY = "130650b3754188a777eb71d9fd5905cf"; 
+
+        const inputField = document.getElementById(`v-banner-input-${i}`);
+        const originalVal = inputField.value;
+        
+        // Show loading state
+        inputField.value = "Uploading... ⏳";
+        inputField.disabled = true;
+
+        try {
+            // Prepare image data for ImgBB
+            const formData = new FormData();
+            formData.append("image", file);
+            
+            // Send request to ImgBB API
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: "POST",
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const directUrl = data.data.url; // Gets the direct link (e.g., https://i.ibb.co/...)
+                
+                // Overwrite the specific row with the new direct URL
+                VendorModal.tempBanners[i] = directUrl;
+                
+                // Auto-add a new empty row below it if we just uploaded to the very last row
+                if (i === VendorModal.tempBanners.length - 1) {
+                    VendorModal.tempBanners.push("");
+                }
+                
+                VendorModal.renderBanners(); // Refresh UI
+                Utils.showToast("✅ Image Uploaded!");
+            } else {
+                throw new Error("ImgBB API Error");
+            }
+        } catch (error) {
+            console.error("Upload failed:", error);
+            inputField.value = originalVal; // Revert back if failed
+            inputField.disabled = false;
+            Utils.showToast("❌ Upload Failed. Check API Key.");
+        }
     },
 
     onBannerInput: (i, val) => {
         VendorModal.tempBanners[i] = val;
         if (i === VendorModal.tempBanners.length - 1 && val.trim() !== "") {
             VendorModal.tempBanners.push("");
-            const container = document.getElementById('v-banners-container');
-            const newIndex = VendorModal.tempBanners.length - 1;
-            const div = document.createElement('div');
-            div.style.cssText = "display:flex; gap:10px; margin-bottom:5px;";
-            div.innerHTML = `
-                <input class="custom-input" placeholder="Image URL" value="" oninput="VendorModal.onBannerInput(${newIndex}, this.value)">
-                <button class="btn btn-delete" onclick="VendorModal.removeBanner(${newIndex})" style="visibility:hidden">×</button>
-            `;
-            container.appendChild(div);
-            const prevBtn = container.children[i].querySelector('.btn-delete');
-            if (prevBtn) prevBtn.style.visibility = 'visible';
+            VendorModal.renderBanners(); // Keep it simple and reliable
         }
     },
 
@@ -263,18 +317,27 @@ const VendorModal = {
     renderMenuTable: () => {
         const tbody = document.querySelector('#vendor-menu-table tbody');
         if (!VendorModal.currentId) {
-            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#aaa">Save vendor first to add menu items.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#aaa; padding: 20px;">Save vendor first to add menu items.</td></tr>`;
             return;
         }
         const items = AppData.menu.filter(m => m.vendorId === VendorModal.currentId);
+        
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#aaa; padding: 20px;">No menu items yet.</td></tr>`;
+            return;
+        }
+
         tbody.innerHTML = items.map(m => {
             const isActive = m.isActive !== false;
             const opacity = isActive ? '1' : '0.5';
-            const badge = isActive ? '' : '<span style="background:#eee; padding:2px 5px; border-radius:4px; font-size:0.75rem; margin-left:5px;">Inactive</span>';
+            const badge = isActive ? '' : '<span style="background:#eee; color:#333; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-left:5px;">Inactive</span>';
             return `
             <tr class="clickable-row" onclick="MenuItemModal.open(${m.id})" style="opacity:${opacity}">
-                <td>${m.name} ${badge} <small style="color:var(--text-light)">(${m.subVendor || 'General'})</small></td>
-                <td>${Utils.formatCurrency(m.price)}</td>
+                <td>
+                    <div style="font-weight:600;">${m.name} ${badge}</div>
+                    <small style="color:var(--text-light); font-size: 0.8rem;">${m.subVendor || 'General'}</small>
+                </td>
+                <td style="text-align:right; font-weight: 600;">${Utils.formatCurrency(m.price)}</td>
             </tr>
             `;
         }).join('');
