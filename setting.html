@@ -118,49 +118,79 @@
         </div>
     </main>
 
-    <div id="vendor-modal" class="modal-overlay">
-        <div class="modal-content glass" style="max-width:800px;">
+<div id="vendor-modal" class="modal-overlay">
+        <div class="modal-content glass" style="max-width:900px; width:95%;">
             <button class="modal-close" onclick="VendorModal.close()">&times;</button>
             <div class="modal-header">
                 <h2>Edit Vendor</h2>
             </div>
-            <div class="modal-scroll-area">
-                <div class="vendor-modal-layout" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
-                    <div class="vendor-left-panel">
-                        <div class="form-group"><label class="form-label">Vendor Name</label><input id="v-name"
-                                class="custom-input"></div>
-                        <div class="form-group"><label class="form-label">Description</label><textarea
-                                id="v-description" class="custom-input textarea"
-                                placeholder="Vendor description (optional)" rows="3"></textarea></div>
-                        <div class="form-group"><label class="form-label">Banner Images</label>
-                            <div id="v-banners-container"></div>
+            
+            <div class="modal-scroll-area" style="padding: 20px; background: rgba(0,0,0,0.02);">
+                <div class="vendor-modal-layout" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items: start;">
+                    
+                    <!-- LEFT PANEL: Configuration Cards -->
+                    <div class="vendor-left-panel" style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- Info Card -->
+                        <div class="glass" style="padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin-top:0; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary);">📝 Basic Info</h3>
+                            <div class="form-group">
+                                <label class="form-label">Vendor Name</label>
+                                <input id="v-name" class="custom-input">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Description</label>
+                                <textarea id="v-description" class="custom-input textarea" placeholder="Vendor description (optional)" rows="2"></textarea>
+                            </div>
                         </div>
-                        <div class="form-group"><label class="form-label">Sub-Vendors</label>
-                            <div id="v-subs-container"></div>
+
+                        <!-- Media Card -->
+                        <div class="glass" style="padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin-top:0; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary);">🖼️ Banners</h3>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <div id="v-banners-container"></div>
+                            </div>
                         </div>
+
+                        <!-- Categories Card -->
+                        <div class="glass" style="padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin-top:0; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary);">🗂️ Categories</h3>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Sub-Vendors</label>
+                                <div id="v-subs-container"></div>
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="vendor-right-panel">
-                        <div class="table-header">
-                            <h3>Menu Items</h3><button class="btn btn-sm btn-secondary" onclick="MenuItemModal.open()">+
-                                Add</button>
+
+                    <!-- RIGHT PANEL: Menu Items Card -->
+                    <div class="vendor-right-panel glass" style="padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; max-height: 650px;">
+                        <div class="table-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin:0; font-size: 1.1rem; color: var(--primary);">🍔 Menu Items</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="MenuItemModal.open()">+ Add Item</button>
                         </div>
-                        <div class="menu-items-scroll-wrapper">
-                            <table id="vendor-menu-table">
+                        
+                        <!-- Scrollable table area -->
+                        <div class="menu-items-scroll-wrapper" style="overflow-y: auto; flex: 1; padding-right: 5px;">
+                            <table id="vendor-menu-table" style="margin: 0;">
                                 <thead>
                                     <tr>
-                                        <th>Item</th>
-                                        <th>Price</th>
+                                        <th style="text-align:left;">Item Name</th>
+                                        <th style="text-align:right;">Price</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
-                        <div style="margin-top:20px;"><button class="btn btn-delete"
-                                onclick="VendorModal.delete()"><span class="anim-wiggle">🗑️</span></button></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-primary" onclick="VendorModal.save()">Save Vendor</button>
+            
+            <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn btn-delete" onclick="VendorModal.delete()" style="display:flex; align-items:center; gap:5px;">
+                    <span class="anim-wiggle">🗑️</span> 
+                </button>
+                <button class="btn btn-primary" onclick="VendorModal.save()">Save Vendor</button>
             </div>
         </div>
     </div>
