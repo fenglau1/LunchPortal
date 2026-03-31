@@ -352,7 +352,7 @@ const Render = {
 
     let itemDisplay = `${o.item}`;
     
-    // Now it will pull the correct description (e.g., "越式牛肉河粉")
+    // Now it will pull the correct description 
     if (menuItem && menuItem.description) {
         itemDisplay += ` - ${menuItem.description}`;
     }
@@ -376,7 +376,99 @@ const Render = {
         });
         tbody.innerHTML = html;
         document.getElementById('table-grand-total').innerText = Utils.formatCurrency(grandTotal);
+        
+        // ADD THIS LINE
+        Render.myOrders();
     },
+
+    // ADD THIS ENTIRE NEW FUNCTION
+    myOrders: () => {
+        const section = document.getElementById('my-orders-section');
+        const list = document.getElementById('my-orders-list');
+        const totalEl = document.getElementById('my-orders-total');
+
+        if (!section || !list || !totalEl) return;
+        if (!AppState.user) {
+            section.style.display = 'none';
+            return;
+        }
+
+        const todaysOrders = AppData.orders.filter(o => o.date === AppState.selectedDate && o.status !== 'Cancelled');
+        
+        // --- 🟢 NEW: Calculate Fixed Sequence Numbers Based ONLY on ID (Chronological) ---
+        const chronoOrders = [...todaysOrders].sort((a, b) => a.id - b.id);
+        const sequenceMap = {};
+        const chronoGrouped = {};
+        chronoOrders.forEach(o => {
+            const category = o.subVendor || o.vendor;
+            if (!chronoGrouped[category]) chronoGrouped[category] = [];
+            chronoGrouped[category].push(o);
+            sequenceMap[o.id] = chronoGrouped[category].length;
+        });
+
+        // Filter to show only the logged-in user's orders
+        const myOrders = todaysOrders.filter(o => o.payer === AppState.user.name || o.user === AppState.user.name);
+
+        if (myOrders.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        let html = '';
+        let personalTotal = 0;
+
+        myOrders.forEach(o => {
+            if (o.payer === AppState.user.name) {
+                personalTotal += o.price;
+            }
+
+            const menuItem = AppData.menu.find(m => 
+                (m.name === o.item || (m.variants && m.variants.some(v => `${m.name} ${v.name}` === o.item))) && 
+                m.subVendor === o.subVendor
+            );
+
+            let itemDisplay = `<strong>${o.item}</strong>`;
+            if (menuItem && menuItem.description) {
+                itemDisplay += ` <small style="color:#666; font-weight: normal;">- ${menuItem.description}</small>`;
+            }
+            
+            let detailsHtml = `<div style="font-size: 1rem; color: #2d3436; ">${itemDisplay}</div>`;
+            if (o.addons && o.addons.length) detailsHtml += `<div style="font-size:0.85rem; color:#636e72; margin-top: 2px;">+ ${o.addons.join(', ')}</div>`;
+            if (o.remarks) detailsHtml += `<div style="font-size:0.85rem; color:#d35400; margin-top: 2px;">📝 ${o.remarks}</div>`;
+
+            let tag = '';
+            if (o.payer === AppState.user.name && o.user !== AppState.user.name) {
+                tag = `<span style="font-size:0.7rem; background:#ffeaa7; color:#d35400; padding:3px 8px; border-radius:12px; display:inline-block; font-weight: 700;">${o.user}</span>`;
+            } else if (o.user === AppState.user.name && o.payer !== AppState.user.name) {
+                tag = `<span style="font-size:0.7rem; background:#81ecec; color:#00b894; padding:3px 8px; border-radius:12px; display:inline-block; font-weight: 700;">Paid by ${o.payer}</span>`;
+            }
+
+            // 🟢 Grab the fixed chronological number from our map
+            const fixedNo = sequenceMap[o.id];
+
+            html += `
+                <div class="clickable-row" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-radius:12px; background: rgba(255,255,255,0.8); margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.02); cursor:pointer;" onclick="ItemModal.openForEdit(${o.id})">
+                    <div style="flex:1;">
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap;">
+                            <span style="font-size:1rem; color:#555; font-weight:600; text-transform: uppercase; letter-spacing:2px;">${o.subVendor || o.vendor}</span>
+                            <span style="background: var(--primary, #9FA8DA); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">#${fixedNo}</span>
+
+                            ${tag}                        
+                        ${detailsHtml}
+			</div>
+                    </div>
+                    <div style="text-align:right; font-weight:bold; font-size:1rem; color:#2d3436; min-width: 80px;">
+                        ${Utils.formatCurrency(o.price)}
+                    </div>
+                </div>
+            `;
+        });
+
+        list.innerHTML = html;
+        totalEl.innerText = `My Total: ${Utils.formatCurrency(personalTotal)}`;
+    },
+
     refreshOrders: async () => {
         const btn = document.querySelector('.refresh-btn-header i');
         if (btn) btn.classList.add('fa-spin');
